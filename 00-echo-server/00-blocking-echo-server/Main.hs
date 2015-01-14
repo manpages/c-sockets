@@ -1,5 +1,5 @@
 module Main where
 
-import EchoOnceServer
+import BlockingEchoServer
 
 main = start "4242"

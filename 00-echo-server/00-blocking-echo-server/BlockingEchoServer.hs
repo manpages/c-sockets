@@ -1,11 +1,12 @@
-module EchoOnceServer
+module BlockingEchoServer
   ( start ) where
 
 import Data.Bits
+import Data.List
 import Network.Socket
 import Network.BSD
-import Data.List
 import System.IO
+import Control.Concurrent
 
 getAddrInfoDo port = 
   getAddrInfo (Just (defaultHints {addrFlags = [AI_PASSIVE]})) Nothing (Just port)
@@ -20,10 +21,13 @@ start port = withSocketsDo $
   socketDo serverAddr                      >>= \s                         ->
   bindSocket s (addrAddress serverAddr)    >>
   listen s 2                               >>
-  accept s                                 >>= \(connS, clientAddr)       ->
-  socketToHandle connS ReadMode            >>= \connHandle                ->
-  hSetBuffering connHandle NoBuffering     >>
-  hGetLine connHandle                      >>= \line                      ->
-  hClose connHandle                        >>
-  putStrLn line                            >>
-  sClose s
+  acceptLoop s
+  where
+    acceptLoop s =
+      accept s                                    >>= \(connS, clientAddr)   ->
+      socketToHandle connS ReadMode               >>= \connHandle            ->
+      hSetBuffering connHandle LineBuffering      >>
+      hGetContents connHandle                     >>= \got ->
+      putStr got                                  >>
+      hClose connHandle                           >>
+      acceptLoop s
